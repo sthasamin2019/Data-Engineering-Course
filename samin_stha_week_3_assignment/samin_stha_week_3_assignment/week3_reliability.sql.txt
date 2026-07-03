@@ -1,0 +1,153 @@
+
+1.
+EXPLAIN ANALYZE
+SELECT *
+FROM trips
+WHERE driver_id = 5;
+
+--Seq Scan on trips  (cost=0.00..126.50 rows=516 width=67) (actual time=0.020..0.532 rows=516.00 loops=1)
+  --Filter: (driver_id = 5)
+ -- Rows Removed by Filter: 4484
+  --Buffers: shared hit=64
+--Planning:
+  --Buffers: shared hit=93
+--Planning Time: 1.258 ms
+--Execution Time: 0.576 ms
+
+EXPLAIN ANALYZE
+SELECT *
+FROM trips
+WHERE status = 'completed';
+
+--Seq Scan on trips  (cost=0.00..126.50 rows=2862 width=67) (actual time=0.012..0.587 rows=2862.00 loops=1)
+ -- Filter: ((status)::text = 'completed'::text)
+ -- Rows Removed by Filter: 2138
+  --Buffers: shared hit=64
+--Planning Time: 0.052 ms
+--Execution Time: 0.663 ms
+
+EXPLAIN ANALYZE
+SELECT *
+FROM trips
+WHERE requested_at >= '2026-01-01';
+
+  --Rows Removed by Filter: 5000
+ -- Buffers: shared hit=64
+--Planning:
+  --Buffers: shared hit=7
+--Planning Time: 0.202 ms
+--Execution Time: 0.734 ms
+
+CREATE INDEX idx_trips_driver_id
+ON trips(driver_id);
+
+CREATE INDEX idx_trips_status
+ON trips(status);
+
+CREATE INDEX idx_trips_requested_at
+ON trips(requested_at);
+
+-- DIFFERNCE AFTER CREATING INDEX 
+
+EXPLAIN ANALYZE
+SELECT *
+FROM trips
+WHERE driver_id = 5;
+       -- Buffers: shared read=3
+--Planning:
+  --Buffers: shared hit=41 read=3
+--Planning Time: 1.930 ms
+--Execution Time: 0.195 ms
+
+
+
+EXPLAIN ANALYZE
+SELECT *
+FROM trips
+WHERE status = 'completed';
+
+  --Buffers: shared hit=64
+--Planning:
+  --Buffers: shared hit=3
+--Planning Time: 0.151 ms
+--Execution Time: 0.666 ms
+
+EXPLAIN ANALYZE
+SELECT *
+FROM trips
+WHERE requested_at >= '2026-01-01';
+
+  --Buffers: shared hit=2
+--Planning:
+  --Buffers: shared hit=4 read=2
+--Planning Time: 0.291 ms
+--Execution Time: 0.013 ms
+
+2
+
+
+CREATE  VIEW completed_trips_view AS
+SELECT
+    d.name AS driver_name,
+    p.name AS passenger_name,
+    lp.city_name AS pickup_city,
+    ld.city_name AS dropoff_city,
+    t.fare_amount,
+    t.distance_km,
+    t.status,
+    t.requested_at,
+    t.completed_at,
+    t.rating,
+    pm.name AS payment_method
+FROM trips t
+JOIN drivers d
+    ON t.driver_id = d.driver_id
+JOIN passengers p
+    ON t.passenger_id = p.passenger_id
+JOIN locations lp
+    ON t.pickup_location_id = lp.location_id
+JOIN locations ld
+    ON t.dropoff_location_id = ld.location_id
+JOIN payment_methods pm
+    ON t.payment_method_id = pm.payment_method_id
+WHERE t.status = 'completed';
+
+SELECT *
+FROM completed_trips_view;
+
+3.
+
+CREATE  VIEW driver_summary_view AS
+SELECT
+    d.driver_id,
+    d.name AS driver_name,
+
+    COUNT(*) AS total_trips,
+
+    COUNT(*) FILTER (WHERE t.status = 'completed') AS completed_trips,
+
+    COUNT(*) FILTER (WHERE t.status = 'cancelled') AS cancelled_trips,
+
+    ROUND(
+        COUNT(*) FILTER (WHERE t.status = 'cancelled') * 100.0
+        / NULLIF(COUNT(*), 0),
+        2
+    ) AS cancellation_rate,
+
+    ROUND(
+        AVG(t.fare_amount) FILTER (WHERE t.status = 'completed'),
+        2
+    ) AS average_fare,
+
+    ROUND(
+        AVG(t.rating) FILTER (WHERE t.status = 'completed'),
+        2
+    ) AS average_rating
+
+FROM drivers d
+LEFT JOIN trips t
+    ON d.driver_id = t.driver_id
+   GROUP BY d.driver_id, d.name;
+
+SELECT *
+FROM driver_summary_view;
