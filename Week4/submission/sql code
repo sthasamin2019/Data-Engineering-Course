@@ -1,0 +1,52 @@
+--question 3
+SELECT
+    dl.city_name,
+    dd.year,
+    dd.month,
+    dd.month_name,
+    SUM(ft.fare_amount) AS total_revenue
+FROM fact_trips ft
+JOIN dim_location dl ON ft.pickup_location_key = dl.location_key
+JOIN dim_date dd      ON ft.date_key = dd.date_key
+GROUP BY dl.city_name, dd.year, dd.month, dd.month_name
+ORDER BY dl.city_name, dd.year, dd.month;
+
+--question 4
+--part 1
+SELECT
+    COALESCE(dpm.name, 'Unknown') AS payment_method,
+    SUM(ft.fare_amount) AS total_revenue
+FROM fact_trips ft
+LEFT JOIN dim_payment_method dpm ON ft.payment_method_key = dpm.payment_method_key
+GROUP BY COALESCE(dpm.name, 'Unknown')
+ORDER BY total_revenue DESC;
+
+--part2
+SELECT
+    dpm.name AS payment_method,
+    dd.year,
+    dd.month,
+    dd.month_name,
+    COUNT(*) AS trip_count,
+    ROUND(AVG(ft.fare_amount), 2) AS avg_fare_per_trip
+FROM fact_trips ft
+LEFT JOIN dim_payment_method dpm ON ft.payment_method_key = dpm.payment_method_key
+JOIN dim_date dd ON ft.date_key = dd.date_key
+GROUP BY dpm.name, dd.year, dd.month, dd.month_name
+ORDER BY dd.year, dd.month, dpm.name;
+ORDER BY total_revenue DESC;
+
+
+--question5
+
+SELECT
+    dt.hour,
+    COUNT(*) AS trip_count,
+    ROUND(
+        100.0 * COUNT(*) / SUM(COUNT(*)) OVER (),
+        2
+    ) AS pct_of_all_trips
+FROM fact_trips ft
+JOIN dim_time dt ON ft.time_key = dt.time_key
+GROUP BY dt.hour
+ORDER BY dt.hour;

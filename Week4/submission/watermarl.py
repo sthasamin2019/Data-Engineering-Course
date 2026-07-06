@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+
 SOURCE_DB_CONFIG = dict(
     host=    os.getenv("SRC_DB_HOST","localhost"),   
     port =   os.getenv("SRC_DB_PORT","5432"),
@@ -298,7 +299,22 @@ def load_dim_vehicle(conn, vehicle_data):
         raise
 
 
-def extract_trips(conn):
+def get_watermark(conn):
+    """
+    Reads the incremental-load watermark from the WAREHOUSE (destination) DB —
+    the max requested_at already present in fact_trips. Returns None on an
+    empty table (first-ever run), which the caller must treat as "load
+    everything" rather than a normal timestamp comparison.
+    """
+    with conn.cursor() as curr:
+        curr.execute("SELECT MAX(requested_at) FROM fact_trips")
+        result = curr.fetchone()
+        watermark = result[0]
+        logger.info(f"Watermark from fact_trips: {watermark}")
+        return watermark
+
+
+def extract_trips(conn, watermark=None):
     extract_trip_sql = """
       SELECT
         t.trip_id,
@@ -322,9 +338,18 @@ def extract_trips(conn):
         tc.cancelled_by          -- from trip_cancellations (NULL for non-cancelled)
     FROM  trips t
     LEFT JOIN trip_cancellations tc ON t.trip_id = tc.trip_id
+    WHERE %(watermark)s IS NULL OR t.requested_at > %(watermark)s
     ORDER BY t.requested_at
         """
-    return extract(conn,extract_trip_sql)
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as curr:
+            curr.execute(extract_trip_sql, {"watermark": watermark})
+            rows = curr.fetchall()
+            logger.info(f"Extracted {len(rows)} from the table (watermark={watermark})")
+        return rows
+    except Exception as e:
+        logger.error(str(e))
+        raise
 
 def load_lookup_dim(conn):
     logger.info("Loading lookup table into memmory")
@@ -369,7 +394,7 @@ def transform(oltp_row, lookups):
             continue
 
         # time_key: requested_at rounded DOWN to the nearest 15-minute bucket
-        # e.g. 14:37 -> 1430
+        
         minute_bucket = (row["requested_at"].minute // 15) * 15
         time_key = row["requested_at"].hour * 100 + minute_bucket
         if time_key not in lookups["time"]:
@@ -543,7 +568,8 @@ def main():
         load_dim_vehicle(dst_conn, vehicle_data)
 
         lookups = load_lookup_dim(dst_conn)
-        rows = extract_trips(src_conn)
+        watermark = get_watermark(dst_conn)
+        rows = extract_trips(src_conn, watermark)
         fact_rows = transform(rows, lookups)
         load_fact_trips(dst_conn, fact_rows)
 
