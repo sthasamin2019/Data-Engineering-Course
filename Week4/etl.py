@@ -14,20 +14,19 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 SOURCE_DB_CONFIG = dict(
-    host=    os.getenv("DB_HOST"),
-    port =   os.getenv("DB_PORT"),
-    dbname = os.getenv("DB_NAME"),
-    user=    os.getenv("DB_USER"),
-    password=os.getenv("DB_PASSWORD")
+    host=    os.getenv("SRC_DB_HOST","localhost"),   
+    port =   os.getenv("SRC_DB_PORT","5432"),
+    dbname = os.getenv("SRC_DB_NAME","ride_prod"),
+    user=    os.getenv ("SRC_DB_USER","postgres"),
+    password=os.getenv("SRC_DB_PASSWORD","password")
 )
 DEST_DB_CONFIG = dict(
-    host=    os.getenv("DEST_DB_HOST"),
-    port =   os.getenv("DEST_DB_PORT"),
-    dbname = os.getenv("DEST_DB_NAME"),
-    user=    os.getenv("DEST_DB_USER"),
-    password=os.getenv("DEST_DB_PASSWORD")
+    host=    os.getenv("DEST_DB_HOST","localhost"),
+    port =   os.getenv("DEST_DB_PORT","5432"),
+    dbname = os.getenv("DEST_DB_NAME","ride_warehouse"),
+    user=    os.getenv("DEST_DB_USER","postgres"),
+    password=os.getenv("DEST_DB_PASSWORD","password")
 )
-
 
 
 def extract(conn,sql):

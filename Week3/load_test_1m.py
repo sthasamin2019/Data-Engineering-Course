@@ -39,9 +39,9 @@ from datetime import datetime, timedelta
 DB_CONFIG = dict(
     host="localhost",
     port=5432,
-    dbname="ride_share",
+    dbname="postgres",
     user="postgres",
-    password="hello123",
+    password="password",
 )
 
 BATCH_SIZE  = 10_000    # rows per transaction — larger = faster load

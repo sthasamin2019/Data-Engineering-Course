@@ -5,9 +5,9 @@ import os
 # Update these if your PostgreSQL setup is different.
 DB_HOST     = "localhost"
 DB_PORT     = 5432
-DB_NAME     = "<your_db_name>"  # replace with your actual database name
-DB_USER     = "<your_db_user>"  # replace with your actual database user
-DB_PASSWORD = "<your_db_password>"  # replace with your actual database password
+DB_NAME     = "postgres"  # replace with your actual database name
+DB_USER     = "postgres"  # replace with your actual database user
+DB_PASSWORD = "password"  # replace with your actual database password
 
 # Path to the CSV file (same folder as this script by default)
 CSV_PATH = os.path.join(os.path.dirname(__file__), "rides.csv")

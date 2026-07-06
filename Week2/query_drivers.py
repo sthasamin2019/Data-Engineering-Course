@@ -55,17 +55,24 @@ def load_config() -> dict:
         dict with keys: host, port, dbname, user, password
     """
     # TODO: call load_dotenv() here
+    load_dotenv()
 
-
-    # TODO: return a dict using os.getenv() for each key
+    # TODO:
+    #  return a dict using os.getenv() for each key
     # Hint: { "host": os.getenv("DB_HOST"), ... }
-    return {}
+    host = os.getenv("DB_HOST")
+    port = os.getenv("DB_PORT")     
+    dbname = os.getenv("DB_NAME")
+    user = os.getenv("DB_USER")
+    password = os.getenv("DB_PASSWORD") 
+    return {"host": host, "port": port, "dbname": dbname, "user": user, "password": password}
 
 
 # ─── TASK 2 ───────────────────────────────────────────────────────────────────
 def get_connection(config: dict):
+    return psycopg2.connect(**config)
     """
-    Open and return a psycopg2 database connection.
+    # Open and return a psycopg2 database connection.
 
     Args:
         config: dict returned by load_config()
@@ -76,8 +83,7 @@ def get_connection(config: dict):
     Hint: psycopg2.connect(host=..., port=..., dbname=..., user=..., password=...)
           Use ** to unpack the config dict directly.
     """
-    # TODO: return psycopg2.connect(**config)
-    pass
+    # TODO: return psycopg2.connect(**config
 
 
 # ─── TASK 3 ───────────────────────────────────────────────────────────────────
@@ -97,6 +103,11 @@ def fetch_drivers(conn) -> list:
       3. Fetch all rows with cur.fetchall()
       4. Close the cursor and return the rows
     """
+    cur=conn.cursor()
+    cur.execute(SQL)
+    rows=cur.fetchall()
+    cur.close()
+    return rows
     # TODO: implement this function
     pass
 
@@ -123,12 +134,24 @@ def print_results(rows: list) -> None:
     """
     # TODO: print the header
 
+    # header
+    print(f"{'Driver':<25}{'Completed Rides':>15}")
+    print("-" * 44)
+ 
+    # rows
+    for driver_name, completed_rides in rows:
+        print(f"{driver_name:<25}{completed_rides:>15}")
+ 
+    # footer
+    print("-" * 44)
+    print(f"{'Total drivers:':<25}{len(rows):>15}")
+ 
+
 
     # TODO: loop over rows and print each driver_name and completed_rides
 
 
     # TODO: print a footer with the total number of drivers
-    pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -144,8 +167,6 @@ def main():
     rows = fetch_drivers(conn)
     print_results(rows)
 
-    conn.close()
-
-
+    
 if __name__ == "__main__":
     main()

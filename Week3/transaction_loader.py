@@ -25,6 +25,9 @@ Test your function with:
 import psycopg2
 import logging
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -85,7 +88,25 @@ def load_batch(conn, rows: list) -> int:
     #
     # Hint: use a try / except / else pattern, or try / except with raise
 
-    pass  # replace this
+    conn.autocommit = False
+    cur = conn.cursor()
+ 
+    try:
+        for row_num, row in enumerate(rows, start=1):
+            try:
+                cur.execute(INSERT_SQL, row)
+            except Exception as e:
+                logger.error(f"Row {row_num} failed: {e}  |  data: {row}")
+                raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Batch rolled back due to error: {e}")
+        raise
+    else:
+        conn.commit()
+        return len(rows)
+    finally:
+        cur.close()
 
 
 def get_test_batches():
